@@ -208,7 +208,7 @@ This project is open source and available under the [MIT License](LICENSE)
 
 ## Acknowledgments
 
-- Data source: [Zameen.com](https://www.zameen.com)
+- Data source: https://opendata.com.pk/dataset/property-data-for-pakistan/
 - Built with: [Streamlit](https://streamlit.io/), [scikit-learn](https://scikit-learn.org/), [Pandas](https://pandas.pydata.org/)
 - Deployed on: [Streamlit Cloud](https://streamlit.io/cloud)
 
