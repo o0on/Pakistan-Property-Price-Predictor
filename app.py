@@ -1202,13 +1202,44 @@ date_added = st.date_input(
 
 year_added = date_added.year
 month_added = date_added.month
-
-
 # --------------------------------------------------
 # Prediction
 # --------------------------------------------------
 
 st.divider()
+
+
+def get_market_inflation_factor(city: str, target_date: date) -> float:
+    """
+    Computes a real-estate appreciation factor based on elapsed years
+    from the 2020 dataset baseline to the user-selected listing date.
+    """
+    base_date = date(2020, 1, 1)
+
+    # Elapsed years dynamically, based on the date the user picked
+    elapsed_years = (target_date - base_date).days / 365.25
+
+    # Baseline annual real estate appreciation + inflation rate (~13-16% CAGR in PK)
+    city_annual_rates = {
+        "Islamabad": 0.155,
+        "Lahore": 0.145,
+        "Karachi": 0.130,
+        "Rawalpindi": 0.135,
+        "Faisalabad": 0.125,
+    }
+    annual_rate = city_annual_rates.get(city, 0.14)
+
+    # Compounding formula: (1 + r)^t. Clamp elapsed_years to 0 so dates
+    # before the 2020 baseline don't produce a factor below 1.
+    factor = (1.0 + annual_rate) ** max(elapsed_years, 0)
+    return round(factor, 2)
+
+
+def format_pkr(amount: float) -> str:
+    if amount >= 1e7:
+        return f"PKR {amount / 1e7:.2f} Crore"
+    return f"PKR {amount / 1e5:.2f} Lakh"
+
 
 if st.button("Predict Property Price", type="primary"):
 
@@ -1224,79 +1255,32 @@ if st.button("Predict Property Price", type="primary"):
         "Area_Marla": [area_marla],
         "purpose": [purpose],
         "year_added": [year_added],
-        "month_added": [month_added]
+        "month_added": [month_added],
     })
 
     try:
-
-        prediction = pipeline.predict(input_data)[0]
+        base_price = float(pipeline.predict(input_data)[0])
+        factor = get_market_inflation_factor(city, date_added)
+        adjusted_price = base_price * factor
 
         st.success("Prediction completed!")
 
-        st.metric(
-            "Estimated Property Price",
-            f"PKR {prediction:,.0f}"
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.metric("Model Estimate (2020 terms)", format_pkr(base_price))
+        with col_b:
+            st.metric(f"Inflation-Adjusted ({date_added.strftime('%b %Y')})", format_pkr(adjusted_price))
+
+        st.info(
+            f"💡 The model's baseline was multiplied by **{factor}×** to account for "
+            f"cumulative appreciation in **{city}** between 2020 and {date_added.strftime('%B %Y')}."
         )
 
         st.caption(
-            "This estimate was generated using the trained "
-            "Random Forest regression pipeline."
+            "This estimate was generated using the trained Random Forest regression pipeline, "
+            "adjusted for estimated market appreciation."
         )
 
     except Exception as e:
-
-        st.error(
-            "An error occurred while making the prediction."
-        )
-
+        st.error("An error occurred while making the prediction.")
         st.exception(e)
-
-import datetime
-
-def get_market_inflation_factor(city: str) -> float:
-    """
-    Computes an automated real-estate appreciation factor based on
-    elapsed years from the 2020 dataset baseline to the current date.
-    """
-    base_date = datetime.date(2020, 1, 1)
-    today = datetime.date.today()
-    
-    # Calculate elapsed years dynamically
-    elapsed_years = (today - base_date).days / 365.25
-    
-    # Baseline annual real estate appreciation + inflation rate (~14-16% CAGR in PK)
-    city_annual_rates = {
-        "Islamabad": 0.155,
-        "Lahore": 0.145,
-        "Karachi": 0.130,
-        "Rawalpindi": 0.135,
-        "Faisalabad": 0.125
-    }
-    annual_rate = city_annual_rates.get(city, 0.14)
-    
-    # Compounding formula: (1 + r)^t
-    factor = (1.0 + annual_rate) ** elapsed_years
-    return round(factor, 2)
-
-if st.button("Predict Price", type="primary"):
-    # 1. Base prediction from your scikit-learn pipeline (2020 terms)
-    base_price_2020 = float(pipeline.predict(input_data)[0])
-    
-    # 2. Automatically compute the factor for the selected city and current year
-    factor = get_market_inflation_factor(city)
-    current_price = base_price_2020 * factor
-    
-    # 3. Render clean comparison
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.metric(
-            label=f"Current Market Estimate ({datetime.date.today().year})",
-            value=f"PKR {current_price / 1e7:.2f} Crore" if current_price >= 1e7 else f"PKR {current_price / 1e5:.2f} Lakh"
-        )
-    with col_b:
-        st.metric(
-            label="2020 Dataset Base",
-            value=f"PKR {base_price_2020 / 1e7:.2f} Crore" if base_price_2020 >= 1e7 else f"PKR {base_price_2020 / 1e5:.2f} Lakh"
-        )
-        
-    st.info(f"💡 **Automated Adjustment:** The model's baseline was multiplied by **{factor}×** to account for cumulative inflation and property appreciation in **{city}** between 2020 and {datetime.date.today().year}.")
