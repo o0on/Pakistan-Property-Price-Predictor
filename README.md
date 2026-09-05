@@ -1,6 +1,6 @@
-# Pakistan Property Price Predictor 
+# Pakistan Property Price Predictor
 
-A machine learning application that predicts property prices in Pakistan using real estate data from multiple cities. Built with scikit-learn, XGBoost, and deployed as an interactive web app with Streamlit.
+A machine learning application that predicts property prices in Pakistan using real estate data from multiple cities. Built with scikit-learn and deployed as an interactive web app with Streamlit.
 
 ## Live Demo
 
@@ -8,43 +8,60 @@ A machine learning application that predicts property prices in Pakistan using r
 
 ## Features
 
--  **Accurate Price Predictions** - Uses an optimized Random Forest model
--  **Multi-City Support** - Covers Islamabad, Rawalpindi, Lahore, Faisalabad, and Karachi
--  **Comprehensive Analysis** - Exploratory data analysis with visualizations
--  **Multiple Models Tested** - Linear Regression, Random Forest, HistGradientBoosting, XGBoost
--  **Efficient Model** - Compressed to 92MB for fast deployment
--  **User-Friendly Interface** - Interactive Streamlit web application
+- **Accurate Price Predictions** - Powered by an optimized Random Forest ensemble ($R^2 \approx 0.886$).
+- **Multi-City Support** - Covers Islamabad, Rawalpindi, Lahore, Faisalabad, and Karachi.
+- **Inflation & Appreciation Awareness** - Dynamically accounts for post-2020 macroeconomic inflation/appreciation factors alongside the historical baseline.
+- **Efficient Deployment** - Serialized pipeline reduced from 1.4 GB down to ~92 MB via compression for fast cloud loading and standard Git tracking.
+- **Interactive Interface** - Clean Streamlit web interface with Lakh and Crore valuation formatting.
 
 ## Dataset
 
-- **Source**: Zameen.com (Pakistan's largest real estate portal)
-- **Records**: ~15,000+ property listings
-- **Features**: Property type, location, city, bedrooms, bathrooms, area size, purpose
+- **Features**: City, location, property type, bedrooms, bathrooms, area size (Marla / Sq. Ft.), purpose
 - **Target**: Property price in PKR (Pakistani Rupees)
 
 ## Model Performance
 
-**Final Model: Random Forest (Optimized)**
-- **R² Score**: 0.7845
-- **MAE (Mean Absolute Error)**: ₨7,234,567
-- **RMSE (Root Mean Squared Error)**: ₨11,456,234
-- **Trees**: 130
-- **Max Depth**: 25
+**Final Deployed Model: Random Forest (Smaller / Optimized)**
+- **$R^2$ Score**: 0.8861
+- **MAE (Mean Absolute Error)**: ₨2,963,513 (~₨2.96M)
+- **RMSE (Root Mean Squared Error)**: ₨11,605,720 (~₨11.61M)
+- **Trees (`n_estimators`)**: 130
+- **Size**: ~92 MB (compressed with gzip level 9, reduced from 1.4 GB)
 
-### Model Comparison
+### Comprehensive Model Comparison
 
-| Model | R² Score | MAE | RMSE |
-|-------|----------|-----|------|
-| Random Forest (Optimized) | 0.7845 | 7.2M | 11.5M |
-| XGBoost | 0.7612 | 8.1M | 12.3M |
-| HistGradientBoosting | 0.7534 | 8.5M | 12.8M |
-| Linear Regression | 0.5432 | 12.3M | 16.7M |
+| Model | MAE (PKR) | RMSE (PKR) | $R^2$ Score | Difference vs. Smaller RF |
+| :--- | :---: | :---: | :---: | :---: |
+| **Random Forest (Original - 1.4 GB)** | 2.96M | 11.59M | 0.8864 | +0.0003 |
+| **Random Forest (Smaller)** *(Deployed)* | **2.96M** | **11.61M** | **0.8861** | **Baseline (Deployed)** |
+| **Random Forest (Tuned)** | 3.00M | 12.39M | 0.8702 | -0.0159 |
+| **XGBoost** | 3.93M | 13.03M | 0.8565 | -0.0296 |
+| **HistGradientBoosting** | 3.83M | 13.35M | 0.8493 | -0.0368 |
+| **Linear Regression** | 13.94M | 30.49M | 0.2138 | -0.6723 |
+
+> **Key Architectural Takeaways:**
+> - The difference between the original 1.4 GB ensemble and the smaller version is negligible (a difference of only **0.0003 in $R^2$** and ~0.2% in MAE/RMSE), while reducing disk and memory usage by **over 93%**.
+> - Tree bagging models significantly outperformed gradient boosting and linear approaches due to high categorical cardinality and localized non-linearities across neighborhoods.
+
+## Performance & Deployment Optimization
+
+1. **Size Optimization:** The default scikit-learn Random Forest serialized at over **1.4 GB**, exceeding GitHub's 100 MB limit and causing memory issues. Pruning `n_estimators` to 130 and applying `joblib.dump(..., compress=('gzip', 9))` reduced it to **~92 MB**.
+2. **Native Git Versioning:** Staying under 100 MB allows tracking the model directly in the Git repository without requiring Git LFS or external cloud storage.
+3. **Streamlit Resource Caching:** The pipeline loads once in memory using `@st.cache_resource`, ensuring sub-100ms prediction latency.
+4. **Runtime Pinning:** Python 3.11 is pinned via `.python-version` to ensure Streamlit Cloud uses pre-built wheels, preventing build timeouts and compilation hangs.
 
 ## Installation
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.10 or 3.11
 - pip or conda
+
+### Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone [https://github.com/o0on/pakistan-property-price-predictor.git](https://github.com/o0on/pakistan-property-price-predictor.git)
+   cd pakistan-property-price-predictor
 
 ### Setup
 
